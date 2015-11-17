@@ -1,0 +1,3 @@
+module music_generator (CLOCK_50);
+
+endmodule

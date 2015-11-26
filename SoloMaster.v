@@ -14,7 +14,7 @@ module song_generator (CLOCK_50, song);
 	input CLOCK_50; 
 	wire [0:13] pool;
 	wire [3:0] cur_note, next_note;
-	wire loadn, reset_n, make_new_song;//control signals for data path
+	wire loadn, reset_n;//control signals for data path
    wire [0:27] next_vector;
 	reg [7:0] counter;
 	reg [2:0] cur_state, next_state;
@@ -47,6 +47,34 @@ module song_generator (CLOCK_50, song);
 					next_state = stop;
 			end
 	endcase
+	
+	//state flip flops
+	always @ (posedge CLOCK_50)
+		cur_state <= next_state;
+		
+	//logic output
+	always @ *
+	case (cur_state)
+		new_song:
+			begin
+				counter = 0;
+				reset_n = 1; // depends on the input
+				loadn = 1;
+			end
+		create_new_note:
+			begin
+				counter = counter + 1;
+				reset_n = 1;
+				loadn = 1;
+			end
+		stop:
+			begin
+				counter = 0;
+				reset_n = 1;
+				loadn = 0;
+			end
+	endcase
+		
 	note_recorder note_rec (clock, next_note, cur_note, loadn);
 	song_recorder song_rec (reset_n, cur_note, song);
 	vector_generator vec_gen (cur_note, next_vector);

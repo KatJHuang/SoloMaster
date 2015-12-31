@@ -1,3 +1,6 @@
+Project SoloMaster
+Tina (Lulu) and Sherry (Katherine)
+
 Introduction
 
 “To live is to be musical, starting with the blood dancing in your veins. Everything living has a rhythm. Do you feel your music?” 

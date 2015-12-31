@@ -15,7 +15,7 @@ In this project, we manage to combine our love for music and programming by simu
 
 From various researches, it is shown that patterns governing the sequence of pitches and rhythms in Jazz music can be modeled by a Markov Chain [1]. By using these results, we can possibly teach a program to synthesize Jazz music on its own, which is what SoloMaster does. SoloMaster composes and plays out Jazz music through two stages. In the first stage, SoloMaster generates a sequence of pitches, and in the second stage plays it out in an improvisational fashion. 
 
-The Description of The Design
+Description of The Design
 
 Algorithm for Composition
 

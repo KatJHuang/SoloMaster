@@ -1,200 +1,276 @@
-module SoloMaster();
-endmodule
-
-module song_generator (CLOCK_50, SW, song);
-	//numerical representation of different pitches
-	parameter REST = 4'd0, D1 = 4'd1, B1 = 4'd2, Db2 = 4'd3, D2 = 4'd4, 
-		E2 = 4'd5, F2 = 4'd6, Gb2 = 4'd7, G2 = 4'd8, A2 = 4'd9,
-		Bb2 = 4'd10, B2 = 4'd11, C3 = 4'd12, Db3 = 4'd13, D3 = 4'd14, 
-		E3 = 4'd15; 
-		
-	//states: one hot encoding 
-	parameter start_new_song = 2'b01, create_new_note = 2'b01;
-	input CLOCK_50; 
-	input [3:0] SW;
-	reg loadn, reset_n;//control signals for data path
-	wire [0:39] pool;
-	wire [3:0] cur_note, next_note, rand_num;
-	wire new; //boolean representing whether a new song should be generated
-	wire [7:0] count;
-	reg [2:0] cur_state, next_state;
-	
-	output reg [1023:0] song; // stores all the pitches 
-	
-	assign cur_note = REST;
-	
-	assign new = SW[3:3]; //switch 3 determines whether or not to start a new song
-	
-	//state transitions
-	always @ *
-	case (cur_state)
-		start_new_song: 
-			begin
-				if (new == 1)
-					next_state = start_new_song;
-				else
-					next_state = create_new_note;
-			end
-		create_new_note:
-			begin 
-				if (count < 256)
-					next_state = create_new_note;	
-				else 
-					next_state = start_new_song;
-			end
-	endcase
-	
-	//state flip flops
-	always @ (posedge CLOCK_50)
-		cur_state <= next_state;
-		
-	//logic output
-	always @ *
-	case (cur_state)
-		start_new_song:
-			begin
-				 reset_n = 0; //set count to 0
-				 loadn = 1; //don't start clock in new notes yet
-			end
-		create_new_note:
-			begin
-				 reset_n = 1; //allows counter to run
-				 loadn = 0; //clock in new notes
-			end
-	endcase
-	
-	counter c (count, CLOCK_50, reset_n);
-	note_recorder note_rec (clock, next_note, cur_note, loadn);
-	song_recorder song_rec (reset_n, cur_note, song);
-	populate_pool populator (cur_note, pool);
-	next_note_generator note_gen (pool, next_note);
-endmodule
-
-module populate_pool (cur_note, pool);
-parameter REST = 4'd0, D1 = 4'd1, B1 = 4'd2, Db2 = 4'd3, D2 = 4'd4, 
-		E2 = 4'd5, F2 = 4'd6, Gb2 = 4'd7, G2 = 4'd8, A2 = 4'd9,
-		Bb2 = 4'd10, B2 = 4'd11, C3 = 4'd12, Db3 = 4'd13, D3 = 4'd14, 
-		E3 = 4'd15;
-	assign counter = 0;
-	input [3:0] cur_note;
-	output reg [0:39] pool; 
-	//pool is 10 * 4 bits
-	//[10 spots for possible next notes] * [each note is 4 bits long]
-	always @ (*)
-	case (cur_note)
-		REST:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		D1:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		B1:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		Db2:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		D2:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		E2:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		F2:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		Gb2:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		G2:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		A2:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		Bb2:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		B2:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		C3:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		Db3:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		D3:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST, REST};
-		E3:
-			pool = {REST, REST, REST, REST, REST,
-					  REST, REST, REST, REST,  D3};
-	endcase
-endmodule
-
-module next_note_generator (pool, next_note);
-	input [0:39] pool;
-	output reg [3:0] next_note;
-	reg [3:0] rand_num;
-	//input [3:0] rand_num; // 0 <= rand_num <= 9
-	//write something to generate a random number
-	always @ *
-	begin
-		rand_num = $random % 10;
-		next_note = pool [(rand_num * 4)+: 4]; 
-	end
-endmodule
-
-module note_recorder(clock, D, Q, loadn);
-//essentially a flip flop that saves the generated notes
-//the load signal is controlled by a FSM
-	input clock, loadn;
-	input [3:0] D;
-	output reg [3:0] Q;
-	always @ (negedge clock)
-	begin
-		if (loadn == 0)
-			Q <= D;
-	end		
-endmodule
-
-module song_recorder(reset_n, cur_note, song);
-	input [3:0] cur_note;
-	input reset_n;
-	output reg [1023:0] song;
-	always @ (cur_note)
-	if (reset_n == 0)
-		song <= 1024'b0;
-	else
-		begin
-			song <= song >> 4; 
-			// right shift all the pitches by 4 bits
-			song [1023:1020] <= cur_note;
-		end
-endmodule
-
-module counter (Q, clk, reset_n);
-	input clk, reset_n;
-	output reg [7:0] Q; //each song is 256 notes long 
-	always @ (posedge clk)
-	if (reset_n == 0)
-		Q <= 7'b0;
-	else 
-		Q <= Q + 1;
-endmodule
-
-module fibonacci_lfsr(
-  input  clk,
-  input  rst_n,
-  output reg [4:0] data
+module SoloMaster(
+    // Inputs
+    CLOCK_50,
+    KEY,
+    AUD_ADCDAT,
+    // Bidirectionals
+    AUD_BCLK,
+    AUD_ADCLRCK,
+    AUD_DACLRCK,
+    I2C_SDAT,
+    // Outputs
+    AUD_XCK,
+    AUD_DACDAT,
+    I2C_SCLK,
+    SW
 );
 
-wire feedback = data[4] ^ data[1] ;
+// Inputs
+input	CLOCK_50;
+input	CLOCK_27;
+input  [3:0] KEY;
+input  [9:0] SW;
+input	AUD_ADCDAT;
 
-always @(posedge clk or negedge rst_n)
-  if (~rst_n) 
-    data <= 4'hf;
-  else
-    data <= {data[3:0], feedback} ;
+// Bidirectionals
+inout	AUD_BCLK;
+inout	AUD_ADCLRCK;
+inout	AUD_DACLRCK;
+inout	I2C_SDAT;
+
+// Outputs
+output	AUD_XCK;
+output	AUD_DACDAT;
+output	I2C_SCLK;
+
+// Internal Wires
+wire	audio_in_available;
+wire  [31:0] left_channel_audio_in;
+wire  [31:0] right_channel_audio_in;
+wire	read_audio_in;
+wire	audio_out_allowed;
+wire  [31:0] left_channel_audio_out;
+wire  [31:0] right_channel_audio_out;
+wire	write_audio_out;
+
+// Internal Registers
+reg [18:0] delay_cnt, delay;
+reg snd;
+
+// Tempo
+reg [25:0] tempo_count,temp,tempo;
+reg pass_note;
+wire [1:0] rand_tempo;
+
+always @ *
+case(SW[9:8])
+1:temp=26'd 37500000;   //80
+2:temp=26'd 33333333;   //90
+3:temp=26'd 30000000;   //100
+default temp=19'd 0;
+endcase
+
+tempo_random tr (CLOCK_50,SW[0],rand_tempo);
+
+always @ *
+begin
+ tempo = temp/rand_tempo;
+end
+
+//Tempo register
+always @(posedge CLOCK_50)
+begin
+if(tempo_count == tempo)
+  begin
+	tempo_count <=0;
+	pass_note=1;
+  end
+else
+  begin
+	tempo_count=tempo_count+1;
+	pass_note =0;
+  end
+end
+
+// Pass note
+reg [3:0] note;
+integer i;
+
+song_generator s (pass_note, SW[0], note);
+
+// Note register
+always @(posedge CLOCK_50)
+     if(delay_cnt == delay) 
+        begin
+        delay_cnt <= 0;
+        snd <= !snd;
+        end 
+     else  
+         delay_cnt <= delay_cnt + 1;
+
+ always @ *
+    case (note)
+        1: delay = 19'd 342466/2;
+        2: delay = 19'd 202477/2;
+        3: delay = 19'd 180386/2;
+        4: delay = 19'd 170262/2;
+        5: delay = 19'd 151686/2;
+        6: delay = 19'd 143173/2;
+        7: delay = 19'd 135137/2;
+        8: delay = 19'd 127552/2;
+        9: delay = 19'd 113636/2;
+        10: delay = 19'd 107258/2;
+        11: delay = 19'd 101238/2;
+        12: delay = 19'd 95556/2;
+        13: delay = 19'd 90193/2;
+        14: delay = 19'd 85131/2;
+        15: delay = 19'd 75843/2;
+        default: delay = 19'd 0;
+    endcase
+                
+wire [31:0] sound = (delay == 0) ? 0 : snd ? 32'd10000000 : -32'd10000000;
+
+// Audio controller
+assign read_audio_in   = audio_in_available & audio_out_allowed;
+assign left_channel_audio_out = left_channel_audio_in+sound;
+assign right_channel_audio_out = right_channel_audio_in+sound;
+assign write_audio_out   = audio_in_available & audio_out_allowed;
+
+Audio_Controller Audio_Controller (
+ // Inputs
+ .CLOCK_50  	(CLOCK_50),
+ .reset  	(~KEY[0]),
+ .clear_audio_in_memory  (),
+ .read_audio_in	(read_audio_in),
+
+ .clear_audio_out_memory  (),
+ .left_channel_audio_out  (left_channel_audio_out),
+ .right_channel_audio_out (right_channel_audio_out),
+ .write_audio_out   (write_audio_out),
+ .AUD_ADCDAT 	(AUD_ADCDAT),
+
+ // Bidirectionals
+ .AUD_BCLK 	(AUD_BCLK),
+ .AUD_ADCLRCK	(AUD_ADCLRCK),
+ .AUD_DACLRCK	(AUD_DACLRCK),
+
+ // Outputs
+ .audio_in_available   (audio_in_available),
+ .left_channel_audio_in  (left_channel_audio_in),
+ .right_channel_audio_in  (right_channel_audio_in),
+ .audio_out_allowed   (audio_out_allowed),
+ .AUD_XCK 	(AUD_XCK),
+ .AUD_DACDAT 	(AUD_DACDAT),
+);
+avconf #(.USE_MIC_INPUT(1)) avc (
+ .I2C_SCLK 	(I2C_SCLK),
+ .I2C_SDAT 	(I2C_SDAT),
+ .CLOCK_50 	(CLOCK_50),
+ .reset  	(~KEY[0])
+);
 endmodule
+
+module note_generator(
+  input  CLOCK,
+  input  [0:0]SW,
+  output reg [3:0] cur_note
+);
+    reg [3:0] note;
+    wire feedback = note[3] ^ note[1] ;
+
+    reg [3:0] next_note;
+    always @(posedge CLOCK)
+    begin
+        if (~SW[0])
+            note <= 4'hf;
+        else
+            note <= {note[2:0], feedback} ;
+        cur_note <= next_note;
+    end
+
+    parameter REST = 4'd0, D1 = 4'd1, B1 = 4'd2, Db2 = 4'd3, D2 = 4'd4,
+            E2 = 4'd5, F2 = 4'd6, Gb2 = 4'd7, G2 = 4'd8, A2 = 4'd9,
+            Bb2 = 4'd10, B2 = 4'd11, C3 = 4'd12, Db3 = 4'd13, D3 = 4'd14,
+            E3 = 4'd15;
+
+    reg [59:0] pool;
+        //pool is 15 * 4 bits
+        //[15 spots for possible next notes] * [each note is 4 bits long]
+    always @ (*)
+        case (cur_note)
+            REST:
+                    pool = {D1, D1, Db3, Db2, Db2,
+                            D2, Gb2, Db3, Db3, A2,
+                            D2, Gb2, Db3, Db3, A2};
+            D1:
+                    pool = {A2, A2, A2, A2, A2,
+                            A2, A2, A2, A2, A2,
+                            A2, A2, A2, A2, A2};
+            B1:
+                    pool = {D1, Db2, D2, D2, D2,
+                            D2, Bb2, Bb2, D1, Db2,
+                            D2, Bb2, D2, D1, Db2};
+            Db2:
+                    pool = {D2, Bb2, D2, Bb2, D2,
+                            Gb2, Gb2, Gb2, Gb2, Gb2,
+                            D2, Bb2, D2,Gb2, Gb2};
+            D2:
+                    pool = {REST, B1, B1, B1, REST,
+                            Gb2, Gb2, Gb2, A2, A2,
+                            A2, A2, B2, B2, B2};
+            E2:
+                    pool = {REST, Bb2, Bb2, REST, REST,
+                            REST, D1, D1, D1, REST,
+                            REST, REST, REST, REST, REST};
+            F2:
+                    pool = {Db3, Db3, Db3, REST, REST,
+                            G2, G2, REST, REST, REST,
+                            G2, Db3, G2, Db3, G2};
+            Gb2:
+                    pool = {REST, B1, D2, D2, D2,
+                            A2, Bb2, A2, Bb2, Db3,
+                            A2, A2, A2, Bb2, Db3};
+            G2:
+                    pool = {F2, F2, F2, Gb2, Gb2,
+                            Gb2, A2, E2, A2, A2,
+                            Gb2, Gb2, Gb2, A2, A2};
+            A2:
+                    pool = {REST, REST, REST, F2, Gb2,
+                            Gb2, Gb2, Gb2, G2, C3,
+                            Gb2, Gb2, Gb2, G2, C3};
+            Bb2:
+                    pool = {REST, A2, REST, REST, REST,
+                            REST, E2, E2, E2, REST,
+                            Db3, Db3, Db3, REST, REST};//
+            B2:
+                    pool = {REST, A2, A2, A2, A2,
+                            A2, A2, A2, A2, E3,
+                            A2, A2, A2, A2, E3};//
+            C3:
+                    pool = {A2, A2, A2, A2, A2,
+                            E3, C3, C3, E3, E3, 
+                            C3, C3, A2, E3, E3};//
+            Db3:
+                    pool = {REST, D2, A2, Bb2, B2,
+                            B2, D3, D3, E3, E3,
+                            B2, D3, D3, E3, E3};//
+            D3:
+                    pool = {A2, B2, B2, B2, B2,
+                            B2, B2, B2, B2, B2,
+                            A2, B2, B2, B2, B2,};
+            E3:
+                    pool = {REST, C3, REST, REST, REST,
+                            REST, C3, C3, REST,  D3,
+                            C3, C3, REST, REST,  D3};
+        endcase
+   
+ always @ *
+        next_note = pool [(note * 4)+: 4];
+ 
+endmodule
+
+module tempo_random(
+  input  CLOCK,
+  input  [0:0]SW,
+  output reg [1:0] tempo
+);//generate a random tempo
+
+wire feedback = tempo[0] ^ tempo[1] ;
+
+always @(posedge CLOCK)
+    if (~SW[0])
+	tempo <= 4'hf;
+    else
+	tempo <= {tempo[0:0], feedback} ;
+endmodule
+

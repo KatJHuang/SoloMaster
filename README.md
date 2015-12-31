@@ -2,7 +2,6 @@ Project SoloMaster
 
 Tina (Lulu) and Sherry (Katherine)
 
-Introduction
 
 “To live is to be musical, starting with the blood dancing in your veins. Everything living has a rhythm. Do you feel your music?” 
 ― Michael Jackson
@@ -11,11 +10,9 @@ Throughout the history of mankind, the perception, combination, and creation of 
 
 However, what underlies the formation of this art? Early philosopher and mathematician Pythagoras postulates that music is inseparable from numbers and patterns. Pitches can be represented in frequencies, while rhythms can be represented in durations. If we can extract the “algorithms” behind music, can we also automate musical composition with little human intervention? 
 
-In this project, we manage to combine our love for music and programming by simulating the composition of Jazz music using FPGA. SoloMaster is an automated composition system whose outcome can also be heard by the user. In SoloMaster, initiation is controlled by a reset switch, and speed adjustment is controlled another 3 switches. 
+In this project, we manage to combine our love for music and programming by simulating the composition of Jazz music using FPGA. SoloMaster is an automated composition system whose outcome can also be heard by the user. In SoloMaster, initiation is controlled by a reset switch, and speed adjustment is controlled by another 3 switches. 
 
 From various researches, it is shown that patterns governing the sequence of pitches and rhythms in Jazz music can be modeled by a Markov Chain [1]. By using these results, we can possibly teach a program to synthesize Jazz music on its own, which is what SoloMaster does. SoloMaster composes and plays out Jazz music through two stages. In the first stage, SoloMaster generates a sequence of pitches, and in the second stage plays it out in an improvisational fashion. 
-
-Description of The Design
 
 Algorithm for Composition
 
@@ -27,7 +24,7 @@ The strength of this algorithm is that the matrix gives great flexibility to pro
 
 Audio Controller
 
-Our project used the audio controller [3] to produce sound. For the jazz style, we chose 15 notes in A7 chord within three octaves. Since different note had its unique frequency[4], we used 15 different counters to achieve the desired frequencies. When the note_ generator module passed the binary representation of the current note, the audio controller would match this note with its corresponding frequency and produce its sound accordingly.
+The project used the audio controller [3] to produce sounds. For the jazz style, we chose 15 notes in A7 chord within three octaves. Since different note had a unique frequency[4], we used 15 different counters to achieve the desired frequencies. When the note_ generator module passed the binary representation of the current note, the audio controller would match this note with its corresponding frequency and produce its sound accordingly.
 The switches on the FPGA were used for user to select. In our project, user could start/resume and pause the music via switch[0]. Furthermore, user could change the tempo of the song before and during the song is being played. We set three different tempo levels, which were 80 beats per minute, 90 beats per minute and 100 beats per minute. Switch [9], [8] and [7] were used to accomplish this function.  Besides tempo for the whole song, the time for each notes was different. According to the algorithm, the notes could be quarter notes, eighth notes, sixteenth notes and rest, which composed to a real song.  
  
 Review and Improvement
